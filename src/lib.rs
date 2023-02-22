@@ -1,6 +1,7 @@
+use rusoto_core::Region;
+use rusoto_credential::EnvironmentProvider;
+use rusoto_ec2::{Ec2, RequestSpotInstancesRequest};
 use std::{collections::HashMap, io};
-use rusoto::{DefaultCredentialProvider, Region};
-use rusoto_dynamodb::{DynamodbClient, ListTablesInput};
 
 struct SshConnection;
 
@@ -48,8 +49,20 @@ impl BurstBuilder {
         self.descriptors.insert(name, (setup, number));
     }
 
-    pub fn run<F>() where F: FnOnce(HashMap<String, &mut [Machine]>) -> io::Result<()> {
+    pub fn run<F>(&self)
+    where
+        F: FnOnce(HashMap<String, &mut [Machine]>) -> io::Result<()>,
+    {
+        // let provider = EnvironmentProvider::new().unwrap();
+        let ec2 = rusoto_ec2::Ec2Client::new(Region::UsEast1);
+
         // 1. issue spot requests
+        for (name, (setup, number)) in self.descriptors {
+            let mut req = RequestSpotInstancesRequest::default();
+            req.instance_count = Some(i64::from(number));
+            req.block_duration_minutes = Some(60); // TODO
+            ec2.request_spot_instances(&req).unwrap();
+        }
         // 2. wait for instace to come up
         //  - once an instance is ready, run setup closure
         // 3. wait until all instances are up and setups have been run
