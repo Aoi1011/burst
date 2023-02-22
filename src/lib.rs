@@ -1,37 +1,62 @@
 use std::{collections::HashMap, io};
+use rusoto::{DefaultCredentialProvider, Region};
+use rusoto_dynamodb::{DynamodbClient, ListTablesInput};
 
-struct SshConnection {}
+struct SshConnection;
 
-struct MachineSetup {
+struct Machine {
+    ssh: SshConnection,
     instance_type: String,
-    ami: String,
+    ip: String,
+    dns: String,
 }
 
-impl MachineSetup {
+pub struct MachineSetup<F> {
+    instance_type: String,
+    ami: String,
+    setup: F,
+}
+
+impl MachineSetup<F> {
     pub fn new<F>(instance_type: String, ami: String, setup: F) -> Self
     where
         F: Fn(&mut SshConnection) -> io::Result<()>,
     {
-        MachineSetup {}
+        MachineSetup {
+            instance_type,
+            ami,
+            setup,
+        }
     }
 }
 
 struct BurstBuilder {
-    descriptors: Vec<MachineSetup>,
+    descriptors: HashMap<String, (MachineSetup, u32)>,
 }
 
 impl Default for BurstBuilder {
     fn default() -> Self {
         BurstBuilder {
-            descriptors: Vec::new(),
+            descriptors: Default::default(),
         }
     }
 }
 
 impl BurstBuilder {
-    pub fn add_set(&mut self, name: String, number: u32, description: MachineSetup) {}
+    pub fn add_set(&mut self, name: String, number: u32, setup: MachineSetup) {
+        // TODO: what if name is already in use?
+        self.descriptors.insert(name, (setup, number));
+    }
 
-    pub fn run() {}
+    pub fn run<F>() where F: FnOnce(HashMap<String, &mut [Machine]>) -> io::Result<()> {
+        // 1. issue spot requests
+        // 2. wait for instace to come up
+        //  - once an instance is ready, run setup closure
+        // 3. wait until all instances are up and setups have been run
+        // 4. stop spot request
+        // 5. invoke F with Machine descriptors
+        // 6. terminate all instances
+    }
 }
 
 fn main() {

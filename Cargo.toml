@@ -7,3 +7,6 @@ edition = "2021"
 
 [dependencies]
 rusoto_ec2 = "0.48.0"
+rusoto_dynamodb = "0.48.0"
+rusoto_credential = "0.48.0"
+rusoto_core = "0.48.0"
