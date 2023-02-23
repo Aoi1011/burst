@@ -6,9 +6,9 @@ use std::{collections::HashMap, io, net::TcpStream};
 use std::io::Read;
 
 
-struct SshConnection;
+pub struct SshConnection;
 
-struct Machine {
+pub struct Machine {
     ssh: Option<SshConnection>,
     instance_type: String,
     private_ip: String,
@@ -22,19 +22,19 @@ pub struct MachineSetup {
 }
 
 impl MachineSetup {
-    pub fn new<F>(instance_type: String, ami: String, setup: F) -> Self
+    pub fn new<F>(instance_type: &str, ami: &str, setup: F) -> Self
     where
         F: Fn(&mut SshConnection) -> io::Result<()> + 'static,
     {
         MachineSetup {
-            instance_type,
-            ami,
+            instance_type: instance_type.to_string(),
+            ami: ami.to_string(),
             setup: Box::new(setup),
         }
     }
 }
 
-struct BurstBuilder {
+pub struct BurstBuilder {
     descriptors: HashMap<String, (MachineSetup, u32)>,
     max_duration: i64,
 }
@@ -49,16 +49,16 @@ impl Default for BurstBuilder {
 }
 
 impl BurstBuilder {
-    pub fn add_set(&mut self, name: String, number: u32, setup: MachineSetup) {
+    pub fn add_set(&mut self, name: &str, number: u32, setup: MachineSetup) {
         // TODO: what if name is already in use?
-        self.descriptors.insert(name, (setup, number));
+        self.descriptors.insert(name.to_string(), (setup, number));
     }
 
     pub fn set_max_duration(&mut self, hours: u8) {
         self.max_duration = hours as i64 * 60;
     }
 
-    pub async fn run<F>(self)
+    pub async fn run<F>(self, f: F)
     where
         F: FnOnce(HashMap<String, &mut [Machine]>) -> io::Result<()>,
     {
